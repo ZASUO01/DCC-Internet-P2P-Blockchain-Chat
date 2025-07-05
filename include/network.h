@@ -4,9 +4,9 @@
 #define NETWORK_H
 
 #include <sys/socket.h>
+#include "p2p-net.h"
 
-int parse_addr(const char *addr_str, struct sockaddr_storage *storage);
-int set_server_socket(const char *protocol);
-int send_packet(int fd, const char *msg, size_t msg_size);
+void init_server(P2PNet *pn);
+int connect_to_peer(const char *addr_str, P2PNet *pn);
 
 #endif

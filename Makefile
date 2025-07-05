@@ -3,11 +3,7 @@ ADDR6 = 2804:1f4a:dcc:ff03::1
 
 CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude 
-LDFLAGS = -lm -g
-
-CC = gcc
-CFLAGS = -Wall -Wextra -Iinclude 
-LDFLAGS = -lm -g
+LDFLAGS = -lssl -lcrypto -lm -g
 
 BIN = bin
 OBJ = obj
