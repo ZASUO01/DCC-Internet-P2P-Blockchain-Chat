@@ -5,6 +5,7 @@
 #include "p2p-net.h"
 #include "logger.h"
 #include <unistd.h>
+#include <stdlib.h>
 
 int main(int argc, char **argv){
     // parse command line arguments
@@ -22,10 +23,17 @@ int main(int argc, char **argv){
     init_server(&p2p_net);
     LOG_MSG(LOG_INFO, "server initialized");
 
+    // accept connections thread
+    pthread_t conn_t;
+    pthread_create(&conn_t, NULL, accept_connections, NULL);
+    LOG_MSG(LOG_INFO, "server ready to accept connections");
+
     // connect to the known peer and init a thread for it
     int known_socket = connect_to_peer(p.addr_str, &p2p_net);
+    if(known_socket < 0){
+        log_exit("connect to known peer failure");
+    }
     pthread_t peer_t;
-
     int *sock = malloc(sizeof(int));
     *sock = known_socket;
     pthread_create(&peer_t, NULL, handle_peer, sock);
@@ -40,8 +48,12 @@ int main(int argc, char **argv){
     read_inputs();
 
     // wait threads
+    pthread_join(conn_t, NULL);
     pthread_join(peer_t, NULL);
     pthread_join(request_t, NULL);
+    for(int i = 0; i < p2p_net.threads_count; i++){
+        pthread_join(p2p_net.peer_threads[i], NULL);
+    }
     
     // cleanup
     clean_p2p_net(&p2p_net);

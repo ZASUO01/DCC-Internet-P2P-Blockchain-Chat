@@ -10,6 +10,8 @@ typedef struct {
     int running;
     int sock_fd;
     Peer peers[MAX_PEERS];
+    int threads_count;
+    pthread_t peer_threads[MAX_PEERS];
     int peer_count;
     ChatMessage *chat_history;
     int history_size;

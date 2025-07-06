@@ -1,6 +1,5 @@
 #include "defs.h"
 #include "network.h"
-#include "p2p-net.h"
 #include "logger.h"
 #include <arpa/inet.h>
 #include <stdint.h>
@@ -70,7 +69,7 @@ int connect_to_peer(const char *addr_str, P2PNet *pn){
     pthread_mutex_lock(&pn->net_mutex);
     close(pn->sock_fd);
     pthread_mutex_unlock(&pn->net_mutex);
-    log_exit("known addr error");
+    return -1;
   }
   struct sockaddr *addr = (struct sockaddr *)&addr4;
 
@@ -79,7 +78,7 @@ int connect_to_peer(const char *addr_str, P2PNet *pn){
     pthread_mutex_lock(&pn->net_mutex);
     close(pn->sock_fd);
     pthread_mutex_unlock(&pn->net_mutex);
-    log_exit("known socket creation failure");
+    return -1;
   }
 
   if(connect(known_fd, addr, sizeof(addr4)) != 0){
@@ -87,7 +86,7 @@ int connect_to_peer(const char *addr_str, P2PNet *pn){
     close(pn->sock_fd);
     pthread_mutex_unlock(&pn->net_mutex);
     close(known_fd);
-    log_exit("known peer connection failure");
+    return -1;
   }
 
    add_peer_to_p2p_net(pn, known_fd, addr4.sin_addr.s_addr);

@@ -4,6 +4,7 @@
 #define OPERATIONS_H
 
 void *periodic_request();
+void *accept_connections();
 void *handle_peer(void *arg);
 void read_inputs();
 

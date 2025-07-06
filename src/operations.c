@@ -1,4 +1,5 @@
 #include "operations.h"
+#include "network.h"
 #include "p2p-net.h"
 #include "logger.h"
 #include <stdlib.h>
@@ -9,6 +10,8 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <stdio.h>
 
 // send a peer request to all the connected peers every 5 seconds
 void *periodic_request(){
@@ -28,6 +31,62 @@ void *periodic_request(){
         
         sleep(5);
     }
+    return NULL;
+}
+
+
+// wait and accept peer connections
+void *accept_connections(){
+    while(1){
+        // stop condition
+        pthread_mutex_lock(&p2p_net.net_mutex);
+        if(p2p_net.running == 0){
+            pthread_mutex_unlock(&p2p_net.net_mutex);
+            break;
+        }
+
+        int sock = p2p_net.sock_fd;
+        pthread_mutex_unlock(&p2p_net.net_mutex);
+
+        fd_set read_fds;
+        FD_ZERO(&read_fds);
+        FD_SET(sock, &read_fds);
+        
+        struct timeval timeout;
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+
+        // wait for activity in the socket
+        int activity = select(sock + 1, &read_fds, NULL, NULL, &timeout);
+        
+        // if activity happened, accept connection
+        if (activity > 0 && FD_ISSET(sock, &read_fds)) {
+            struct sockaddr_in peer_addr;
+            socklen_t addr_len = sizeof(peer_addr);
+            int peer_fd = accept(sock, (struct sockaddr*)&peer_addr, &addr_len);
+            
+            if (peer_fd < 0) {
+                continue;
+            }
+
+            // get ip str
+            char ip_str[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &peer_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
+            printf("Peer %s\n has connected to you", ip_str);
+
+            // add the new peer to the list
+            add_peer_to_p2p_net(&p2p_net, peer_fd, peer_addr.sin_addr.s_addr);
+        
+            // create a thread for this peer
+            int * sock_t = malloc(sizeof(int));
+            *sock_t = peer_fd;
+
+            pthread_mutex_lock(&p2p_net.net_mutex);
+            pthread_create(&p2p_net.peer_threads[p2p_net.threads_count], NULL, handle_peer, sock_t);
+            p2p_net.threads_count++;
+            pthread_mutex_unlock(&p2p_net.net_mutex);
+        }
+    }    
     return NULL;
 }
 
@@ -184,6 +243,7 @@ void read_inputs(){
         // quit
         else if (strcmp(input, "quit") == 0) {
             LOG_MSG(LOG_INFO, "read_inputs() quit");
+            printf("program being finished...\n");
             pthread_mutex_lock(&p2p_net.net_mutex);
             p2p_net.running = 0;
             pthread_mutex_unlock(&p2p_net.net_mutex);
@@ -201,8 +261,14 @@ void read_inputs(){
         }
 
         //  connect to the informed peer
-        else if (strncmp(input, "/connect ", 9) == 0) {
-            //connect_to_peer(network, input + 9);
+        else if (strncmp(input, "connect ", 8) == 0) {
+            int peer_sock = connect_to_peer(input + 8, &p2p_net);
+            int *sock_t = malloc(sizeof(int));
+            *sock_t = peer_sock;
+            pthread_mutex_lock(&p2p_net.net_mutex);
+            pthread_create(&p2p_net.peer_threads[p2p_net.threads_count], NULL, handle_peer, sock_t);
+            p2p_net.threads_count++;
+            pthread_mutex_unlock(&p2p_net.net_mutex);
         }
         
         // mine hash and add message to chat
