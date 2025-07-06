@@ -31,11 +31,17 @@ int main(int argc, char **argv){
     pthread_create(&peer_t, NULL, handle_peer, sock);
     LOG_MSG(LOG_INFO, "connected to known peer %s", p.addr_str);
 
+    // init the periodic peer requests thread
+    pthread_t request_t;
+    pthread_create(&request_t, NULL, periodic_request, NULL);
+    LOG_MSG(LOG_INFO, "periodic request initialized");
+
     // read terminal commands
     read_inputs();
 
     // wait threads
     pthread_join(peer_t, NULL);
+    pthread_join(request_t, NULL);
     
     // cleanup
     clean_p2p_net(&p2p_net);

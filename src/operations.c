@@ -10,6 +10,28 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+// send a peer request to all the connected peers every 5 seconds
+void *periodic_request(){
+    while(1){
+        // stop condition
+        pthread_mutex_lock(&p2p_net.net_mutex);
+        if(p2p_net.running == 0){
+            pthread_mutex_unlock(&p2p_net.net_mutex);
+            break;
+        }
+        
+        for(int i = 0; i < p2p_net.peer_count; i++){
+            send_peer_request(p2p_net.peers[i].socket);
+        }
+        
+        pthread_mutex_unlock(&p2p_net.net_mutex);
+        
+        sleep(5);
+    }
+    return NULL;
+}
+
+
 // thread to handle the communication with a peer
 void *handle_peer(void *arg){
     // peer socket
@@ -178,7 +200,7 @@ void read_inputs(){
             list_history(&p2p_net);
         }
 
-        // 
+        //  connect to the informed peer
         else if (strncmp(input, "/connect ", 9) == 0) {
             //connect_to_peer(network, input + 9);
         }

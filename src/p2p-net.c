@@ -272,16 +272,63 @@ int handle_peer_list(int fd,  P2PNet *pn){
     peer_count = ntohl(peer_count);
 
     // receive the ip list then
-    uint32_t ips[MAX_PEERS];
-    size_t ips_size = peer_count * 4;
+    uint32_t ips[peer_count];
+    size_t offset = 0;
+
+    for(int i = 0; i < peer_count; i++){
+        bytes = recv(fd, ips + offset, 4, MSG_WAITALL);
+        offset += 4;
     
-    bytes = recv(fd, ips, ips_size, MSG_WAITALL); 
-    if (bytes != (ssize_t)ips_size) {
-        return -1;
+        if (bytes != 4) {
+            return -1;
+        }
     }
 
-    // TODO CONNECT TO PEERS
- 
+    /* 
+    // connect to peers
+    for (uint32_t i = 0; i < peer_count; i++) {
+        uint32_t ip = ntohl(ips[i]);
+
+        // skip invalid ips (0.0.0.0)
+        if (ip == 0) {
+            continue;
+        }
+
+        // convert to string
+        char ip_str[INET_ADDRSTRLEN];
+        if (!inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN)) {
+            continue;
+        }
+
+        printf("%s\n", ip_str);
+        
+        // try to connect if not connected yet
+        pthread_mutex_lock(&pn->net_mutex);
+        int already_connected = 0;
+        
+        for (int j = 0; j < pn->peer_count; j++) {
+            if (pn->peers[j].ip == ip) {
+                already_connected = 1;
+                break;
+            }
+        }
+        pthread_mutex_unlock(&pn->net_mutex);
+
+        // skip if already connected
+        if (already_connected > 0) {
+            continue;
+        }
+
+        // skip our own ip address
+        //if (is_own_ip(pn, ip_addr.s_addr)) {
+        //    continue;
+        //}
+
+        // Connect to the new peer
+        //connect_to_peer(pn, ip_str);
+     }
+     */
+
     return 0;
 }
 
