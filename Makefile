@@ -27,7 +27,7 @@ $(BIN) $(OBJ):
 	mkdir -p $@
 
 run:
-	$(TARGET) $(ADDR4) -d
+	$(TARGET) $(ADDR4)
 
 clean:
 	rm -rf $(BIN) $(OBJ) $(LOG)

@@ -4,5 +4,6 @@
 #define OPERATIONS_H
 
 void *handle_peer(void *arg);
+void read_inputs();
 
 #endif
