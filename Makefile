@@ -1,5 +1,4 @@
-ADDR4 = 150.164.213.243
-ADDR6 = 2804:1f4a:dcc:ff03::1
+IPV4 = 150.164.213.243
 
 CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude 
@@ -27,7 +26,7 @@ $(BIN) $(OBJ):
 	mkdir -p $@
 
 run:
-	$(TARGET) $(ADDR4)
+	$(TARGET) $(IPV4) -i
 
 clean:
 	rm -rf $(BIN) $(OBJ) $(LOG)

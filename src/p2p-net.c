@@ -495,6 +495,7 @@ void clean_p2p_net(P2PNet *pn){
         return;
     }
 
+    // disconnect to all peers
     for (int i = 0; i < pn->peer_count; i++) {
         if (pn->peers[i].socket != -1) {
             shutdown(pn->peers[i].socket, SHUT_RDWR);
@@ -503,17 +504,21 @@ void clean_p2p_net(P2PNet *pn){
     }
     pn->peer_count = 0;
     
+    // close own socket
     shutdown(pn->sock_fd, SHUT_RDWR);
     close(pn->sock_fd);
 
+    // remove chat history
     if(pn->chat_history != NULL){
         free(pn->chat_history);
         pn->chat_history = NULL;
         pn->history_size = 0;
     }
 
+    // destroy mutexes
     pthread_mutex_destroy(&pn->net_mutex);
     pthread_mutex_destroy(&pn->chat_mutex);
 
+    // reset memory
     memset(pn, 0, sizeof(P2PNet));
 }

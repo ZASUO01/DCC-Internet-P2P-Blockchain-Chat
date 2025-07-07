@@ -1,19 +1,26 @@
 #include "parser.h"
 #include "operations.h"
 #include "network.h"
-#include "defs.h"
 #include "p2p-net.h"
 #include "logger.h"
-#include <unistd.h>
-#include <stdlib.h>
+
 
 int main(int argc, char **argv){
     // parse command line arguments
     Params p = parse_args(argc, argv);
 
     // set debug level
-    if(p.debug_mode > 0){
+    switch (p.log_mode){
+    case 0:
+        set_log_level(LOG_DISABLED);
+        break;
+    case 1:
         set_log_level(LOG_INFO);
+        break;
+    case 2:
+        set_log_level(LOG_DEBUG);
+    default:
+        break;
     }
 
     // init p2p net global structure
@@ -21,41 +28,37 @@ int main(int argc, char **argv){
 
     // init this server
     init_server(&p2p_net);
-    LOG_MSG(LOG_INFO, "server initialized");
+    LOG_MSG(LOG_INFO, "main() - server initialized");
 
+    pthread_mutex_lock(&p2p_net.net_mutex);
+    
     // accept connections thread
-    pthread_t conn_t;
-    pthread_create(&conn_t, NULL, accept_connections, NULL);
-    LOG_MSG(LOG_INFO, "server ready to accept connections");
-
-    // connect to the known peer and init a thread for it
-    int known_socket = connect_to_peer(p.addr_str, &p2p_net);
-    if(known_socket < 0){
-        log_exit("connect to known peer failure");
-    }
-    pthread_t peer_t;
-    int *sock = malloc(sizeof(int));
-    *sock = known_socket;
-    pthread_create(&peer_t, NULL, handle_peer, sock);
-    LOG_MSG(LOG_INFO, "connected to known peer %s", p.addr_str);
+    pthread_create(&p2p_net.running_threads[p2p_net.threads_count], NULL, accept_connections, NULL);
+    p2p_net.threads_count++;
+    LOG_MSG(LOG_INFO, "main() - server ready to accept connections");
 
     // init the periodic peer requests thread
-    pthread_t request_t;
-    pthread_create(&request_t, NULL, periodic_request, NULL);
-    LOG_MSG(LOG_INFO, "periodic request initialized");
+    pthread_create(&p2p_net.running_threads[p2p_net.threads_count], NULL, periodic_request, NULL);
+    p2p_net.threads_count++;
+    LOG_MSG(LOG_INFO, "main() - sending periodic requests to peers");
+    
+    pthread_mutex_unlock(&p2p_net.net_mutex);
 
     // read terminal commands
+    LOG_MSG(LOG_INFO, "main() - reading user inputs");
     read_inputs();
-
+    
     // wait threads
-    pthread_join(conn_t, NULL);
-    pthread_join(peer_t, NULL);
-    pthread_join(request_t, NULL);
     for(int i = 0; i < p2p_net.threads_count; i++){
-        pthread_join(p2p_net.peer_threads[i], NULL);
+        if(p2p_net.running_threads[i]){
+            pthread_join(p2p_net.running_threads[i], NULL);
+            p2p_net.running_threads[i] = 0;
+        }   
     }
+    p2p_net.threads_count = 0;
     
     // cleanup
     clean_p2p_net(&p2p_net);
+    LOG_MSG(LOG_INFO, "main() - program finished");
     return 0;
 }

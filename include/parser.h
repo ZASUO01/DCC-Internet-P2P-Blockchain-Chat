@@ -5,8 +5,8 @@
 
 // command line arguments
 typedef struct {
+  int log_mode;
   char *addr_str;
-  int debug_mode;
 } Params;
 
 // parse the command line arguments

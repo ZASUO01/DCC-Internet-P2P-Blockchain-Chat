@@ -7,9 +7,10 @@ static FILE *log_file = NULL;
 
 // print program correct usage and exit
 void usage(const char *program) {
-  fprintf(stderr, "Usage: %s <addr>", program);
-  exit(EXIT_FAILURE);
+  fprintf(stderr, "Usage: %s [-h | --help] [-d | -i] [ipv4]\n", program);
+  exit(EXIT_SUCCESS);
 }
+
 // finish program due failure
 void log_exit(const char *msg) {
   fprintf(stderr, "%s\n", msg);
@@ -25,6 +26,8 @@ static const char *get_level_str(LogLevel level) {
     return "WARNING";
   case LOG_ERROR:
     return "ERROR";
+  case LOG_DEBUG:
+    return "DEBUG";
   default:
     return "UNKNOWN";
   }

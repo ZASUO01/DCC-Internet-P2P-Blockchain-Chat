@@ -82,7 +82,7 @@ void *accept_connections(){
             *sock_t = peer_fd;
 
             pthread_mutex_lock(&p2p_net.net_mutex);
-            pthread_create(&p2p_net.peer_threads[p2p_net.threads_count], NULL, handle_peer, sock_t);
+            pthread_create(&p2p_net.running_threads[p2p_net.threads_count], NULL, handle_peer, sock_t);
             p2p_net.threads_count++;
             pthread_mutex_unlock(&p2p_net.net_mutex);
         }
@@ -262,11 +262,14 @@ void read_inputs(){
 
         //  connect to the informed peer
         else if (strncmp(input, "connect ", 8) == 0) {
-            int peer_sock = connect_to_peer(input + 8, &p2p_net);
+            int peer_socket = connect_to_peer(input + 8, &p2p_net);
+            if(peer_socket < 0){
+                continue;
+            }
             int *sock_t = malloc(sizeof(int));
-            *sock_t = peer_sock;
+            *sock_t = peer_socket;
             pthread_mutex_lock(&p2p_net.net_mutex);
-            pthread_create(&p2p_net.peer_threads[p2p_net.threads_count], NULL, handle_peer, sock_t);
+            pthread_create(&p2p_net.running_threads[p2p_net.threads_count], NULL, handle_peer, sock_t);
             p2p_net.threads_count++;
             pthread_mutex_unlock(&p2p_net.net_mutex);
         }

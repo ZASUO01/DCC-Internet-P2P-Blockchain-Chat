@@ -9,16 +9,17 @@
 
 // simple logger
 typedef enum {
-  LOG_INFO,
-  LOG_WARNING,
+  LOG_DEBUG,
   LOG_ERROR,
+  LOG_WARNING,
+  LOG_INFO,
   LOG_DISABLED,
 } LogLevel;
 
 #define LOG_MSG(level, fmt, ...) log_message(level, fmt, ##__VA_ARGS__)
 
-void log_exit(const char *msg);
 void usage(const char *program);
+void log_exit(const char *msg);
 void set_log_level(LogLevel level);
 void set_log_file(FILE *file);
 char *get_log_file_name(const char *ip);
