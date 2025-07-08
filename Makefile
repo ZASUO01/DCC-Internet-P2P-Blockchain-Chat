@@ -25,8 +25,11 @@ $(OBJ)/%.o: $(SRC)/%.c | $(OBJ)
 $(BIN) $(OBJ): 
 	mkdir -p $@
 
-run:
+test:
 	$(TARGET) $(IPV4) -i
+
+run:
+	$(TARGET)
 
 clean:
 	rm -rf $(BIN) $(OBJ) $(LOG)

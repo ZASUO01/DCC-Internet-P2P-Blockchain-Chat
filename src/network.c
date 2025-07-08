@@ -89,6 +89,6 @@ int connect_to_peer(const char *addr_str, P2PNet *pn){
     return -1;
   }
 
-   add_peer_to_p2p_net(pn, known_fd, addr4.sin_addr.s_addr);
-   return known_fd;
+  add_peer_to_p2p_net(pn, known_fd, addr4.sin_addr.s_addr);
+  return known_fd;
 }

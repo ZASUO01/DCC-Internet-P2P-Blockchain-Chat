@@ -17,6 +17,7 @@ typedef struct {
     int history_size;
     pthread_mutex_t net_mutex;
     pthread_mutex_t chat_mutex;
+    pthread_cond_t wait_cond;
 } P2PNet;
 
 // global variable

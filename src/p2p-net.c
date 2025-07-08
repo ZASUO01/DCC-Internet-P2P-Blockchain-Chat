@@ -1,5 +1,6 @@
 #include "p2p-net.h"
 #include "network.h"
+#include "operations.h"
 #include "logger.h"
 #include <sys/socket.h>
 #include <unistd.h>
@@ -185,6 +186,7 @@ void init_p2p_net(P2PNet *pn){
     pn->peer_count = 0;
     pthread_mutex_init(&pn->net_mutex, NULL);
     pthread_mutex_init(&pn->chat_mutex, NULL);
+    pthread_cond_init(&pn->wait_cond, NULL);
 }
 
 // add to the peers list
@@ -285,6 +287,17 @@ int handle_peer_list(int fd,  P2PNet *pn){
         inet_ntop(AF_INET, &ips[i], ip_str, INET_ADDRSTRLEN);
 
         // ADD PEER
+        int peer_fd = connect_to_peer(ip_str, pn);
+        if(peer_fd < 0){
+            continue;
+        }
+
+        int *sock_t = malloc(sizeof(int));
+        *sock_t = peer_fd;
+        pthread_mutex_lock(&pn->net_mutex);
+        pthread_create(&pn->running_threads[pn->threads_count], NULL, handle_peer, sock_t);
+        pn->threads_count++;
+        pthread_mutex_unlock(&pn->net_mutex);
     }
 
     return 0;
@@ -518,6 +531,7 @@ void clean_p2p_net(P2PNet *pn){
     // destroy mutexes
     pthread_mutex_destroy(&pn->net_mutex);
     pthread_mutex_destroy(&pn->chat_mutex);
+    pthread_cond_destroy(&pn->wait_cond);
 
     // reset memory
     memset(pn, 0, sizeof(P2PNet));

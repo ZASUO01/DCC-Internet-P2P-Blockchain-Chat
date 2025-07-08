@@ -25,12 +25,23 @@ void *periodic_request(){
         
         for(int i = 0; i < p2p_net.peer_count; i++){
             send_peer_request(p2p_net.peers[i].socket);
+
+              char ip_str[INET_ADDRSTRLEN];
+              inet_ntop(AF_INET, &p2p_net.peers[i].ip, ip_str, INET_ADDRSTRLEN);
+              LOG_MSG(LOG_DEBUG, "peer request sent to %s", ip_str);
         }
         
+        // 5 seconds timeout to continue sending requests
+        time_t t;
+        struct timespec ts;
+        time(&t);
+        ts.tv_sec = t + 5;
+        ts.tv_nsec = 0;
+
+        pthread_cond_timedwait(&p2p_net.wait_cond, &p2p_net.net_mutex, &ts);
         pthread_mutex_unlock(&p2p_net.net_mutex);
-        
-        sleep(5);
     }
+    LOG_MSG(LOG_DEBUG, "stoped periodic requests");
     return NULL;
 }
 
@@ -157,43 +168,43 @@ void *handle_peer(void *arg){
 
         switch(msg_type){
         case PEER_REQUEST:
-            LOG_MSG(LOG_INFO, "received PEER_REQUEST");
+            LOG_MSG(LOG_DEBUG, "received PEER_REQUEST");
             if(send_peer_list(sock_fd, &p2p_net) != 0){
                 LOG_MSG(LOG_ERROR, "failed to send the peer list");
             }else{
-                LOG_MSG(LOG_INFO, "sent peer list");
+                LOG_MSG(LOG_DEBUG, "sent peer list");
             }
             break;
         case PEER_LIST:
-            LOG_MSG(LOG_INFO, "received PEER_LIST");
+            LOG_MSG(LOG_DEBUG, "received PEER_LIST");
             if(handle_peer_list(sock_fd, &p2p_net) != 0){
                 LOG_MSG(LOG_ERROR, "failed to receive peer list");
             }else{
-                LOG_MSG(LOG_INFO, "peer list proccessed successfully");
+                LOG_MSG(LOG_DEBUG, "peer list proccessed successfully");
             }
             break;
         case ARCHIVE_REQUEST:
-            LOG_MSG(LOG_INFO, "received ARCHIVE_REQUEST");
+            LOG_MSG(LOG_DEBUG, "received ARCHIVE_REQUEST");
             if(send_archive(sock_fd, &p2p_net) != 0){
                  LOG_MSG(LOG_ERROR, "failed to send the chat history");
             }else{
-                LOG_MSG(LOG_INFO, "chat history sent successfully");
+                LOG_MSG(LOG_DEBUG, "chat history sent successfully");
             }
             break;
         case ARCHIVE_RESPONSE:
-             LOG_MSG(LOG_INFO, "received ARCHIVE_RESPONSE");
+             LOG_MSG(LOG_DEBUG, "received ARCHIVE_RESPONSE");
             if(handle_archive(sock_fd, &p2p_net) != 0){
                  LOG_MSG(LOG_ERROR, "failed to proccess the chat history");
             }else{
-                LOG_MSG(LOG_INFO, "chat history proccessed successfully");
+                LOG_MSG(LOG_DEBUG, "chat history proccessed successfully");
             }
             break;
         case NOTIFICATION:
-            LOG_MSG(LOG_INFO, "received NOTIFICATION");
+            LOG_MSG(LOG_DEBUG, "received NOTIFICATION");
             if(handle_notification(sock_fd) != 0){
                 LOG_MSG(LOG_ERROR, "failed to proccess notification");
             }else{
-                LOG_MSG(LOG_INFO, "notification processed");
+                LOG_MSG(LOG_DEBUG, "notification processed");
             }
             break;
         default:
@@ -242,10 +253,10 @@ void read_inputs(){
         
         // quit
         else if (strcmp(input, "quit") == 0) {
-            LOG_MSG(LOG_INFO, "read_inputs() quit");
             printf("program being finished...\n");
             pthread_mutex_lock(&p2p_net.net_mutex);
             p2p_net.running = 0;
+            pthread_cond_signal(&p2p_net.wait_cond);
             pthread_mutex_unlock(&p2p_net.net_mutex);
             break;
         }
