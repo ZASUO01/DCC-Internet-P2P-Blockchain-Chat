@@ -83,7 +83,7 @@ void *accept_connections(){
             // get ip str
             char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &peer_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
-            printf("Peer %s\n has connected to you", ip_str);
+            LOG_MSG(LOG_INFO, "peer %s has connected to you\n", ip_str);
 
             // add the new peer to the list
             add_peer_to_p2p_net(&p2p_net, peer_fd, peer_addr.sin_addr.s_addr);
@@ -163,52 +163,54 @@ void *handle_peer(void *arg){
             break;
         }
 
+        LOG_MSG(LOG_DEBUG, "handle_peer(): received %ld bytes", bytes);
+
         //update last receipt time
         gettimeofday(&last_activity, NULL);
 
         switch(msg_type){
         case PEER_REQUEST:
-            LOG_MSG(LOG_DEBUG, "received PEER_REQUEST");
+            LOG_MSG(LOG_DEBUG, "handle_peer(): received PEER_REQUEST");
             if(send_peer_list(sock_fd, &p2p_net) != 0){
-                LOG_MSG(LOG_ERROR, "failed to send the peer list");
+                LOG_MSG(LOG_ERROR, "handle_peer(): failed to send the peer list");
             }else{
-                LOG_MSG(LOG_DEBUG, "sent peer list");
+                LOG_MSG(LOG_DEBUG, "handle_peer(): sent peer list");
             }
             break;
         case PEER_LIST:
-            LOG_MSG(LOG_DEBUG, "received PEER_LIST");
+            LOG_MSG(LOG_DEBUG, "handle_peer(): received PEER_LIST");
             if(handle_peer_list(sock_fd, &p2p_net) != 0){
-                LOG_MSG(LOG_ERROR, "failed to receive peer list");
+                LOG_MSG(LOG_ERROR, "handle_peer(): failed to receive peer list");
             }else{
-                LOG_MSG(LOG_DEBUG, "peer list proccessed successfully");
+                LOG_MSG(LOG_DEBUG, "handle_peer(): peer list proccessed successfully");
             }
             break;
         case ARCHIVE_REQUEST:
-            LOG_MSG(LOG_DEBUG, "received ARCHIVE_REQUEST");
+            LOG_MSG(LOG_DEBUG, "handle_peer(): received ARCHIVE_REQUEST");
             if(send_archive(sock_fd, &p2p_net) != 0){
-                 LOG_MSG(LOG_ERROR, "failed to send the chat history");
+                 LOG_MSG(LOG_ERROR, "handle_peer(): failed to send the chat history");
             }else{
-                LOG_MSG(LOG_DEBUG, "chat history sent successfully");
+                LOG_MSG(LOG_DEBUG, "handle_peer(): chat history sent successfully");
             }
             break;
         case ARCHIVE_RESPONSE:
-             LOG_MSG(LOG_DEBUG, "received ARCHIVE_RESPONSE");
+             LOG_MSG(LOG_DEBUG, "handle_peer(): received ARCHIVE_RESPONSE");
             if(handle_archive(sock_fd, &p2p_net) != 0){
-                 LOG_MSG(LOG_ERROR, "failed to proccess the chat history");
+                 LOG_MSG(LOG_ERROR, "handle_peer(): failed to proccess the chat history");
             }else{
-                LOG_MSG(LOG_DEBUG, "chat history proccessed successfully");
+                LOG_MSG(LOG_DEBUG, "handle_peer(): chat history proccessed successfully");
             }
             break;
         case NOTIFICATION:
-            LOG_MSG(LOG_DEBUG, "received NOTIFICATION");
+            LOG_MSG(LOG_DEBUG, "handle_peer(): received NOTIFICATION");
             if(handle_notification(sock_fd) != 0){
-                LOG_MSG(LOG_ERROR, "failed to proccess notification");
+                LOG_MSG(LOG_ERROR, "handle_peer(): failed to proccess notification");
             }else{
-                LOG_MSG(LOG_DEBUG, "notification processed");
+                LOG_MSG(LOG_DEBUG, "handle_peer(): notification processed");
             }
             break;
         default:
-            LOG_MSG(LOG_WARNING, "received UNKNOWN");
+            LOG_MSG(LOG_WARNING, "handle_peer(): received UNKNOWN");
             break;
         }
     }
@@ -267,8 +269,12 @@ void read_inputs(){
         }
 
         // print current chat
-        else if (strcmp(input, "history") == 0) {
-            list_history(&p2p_net);
+        else if (strncmp(input, "history", 7) == 0) {
+            if(strcmp(input + 7, "") == 0){
+                list_history(&p2p_net);
+            }else if(strcmp(input + 7, " data") == 0){
+                list_history_complete(&p2p_net);
+            }
         }
 
         //  connect to the informed peer
@@ -283,11 +289,13 @@ void read_inputs(){
             pthread_create(&p2p_net.running_threads[p2p_net.threads_count], NULL, handle_peer, sock_t);
             p2p_net.threads_count++;
             pthread_mutex_unlock(&p2p_net.net_mutex);
+            LOG_MSG(LOG_INFO, "read_inputs(): connected to peer %s", input + 8);
         }
         
         // mine hash and add message to chat
         else {
             send_chat_message(&p2p_net, input);
+            LOG_MSG(LOG_INFO, "read_inputs(): chat message sent");
         }
     }
 }

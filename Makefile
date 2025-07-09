@@ -29,7 +29,7 @@ test:
 	$(TARGET) $(IPV4) -i
 
 run:
-	$(TARGET)
+	$(TARGET) -i
 
 clean:
 	rm -rf $(BIN) $(OBJ) $(LOG)

@@ -34,6 +34,7 @@ int handle_archive(int fd, P2PNet *pn);
 int handle_notification(int fd);
 void list_peers(P2PNet *pn);
 void list_history(P2PNet *pn);
+void list_history_complete(P2PNet *pn);
 void send_chat_message(P2PNet *pn, const char *message);
 void clean_p2p_net(P2PNet *pn);
 

@@ -238,16 +238,22 @@ int send_peer_list(int fd, P2PNet *pn){
     uint8_t msg_type = PEER_LIST;
     pthread_mutex_lock(&pn->net_mutex);
     
-    uint32_t peer_count = htonl(pn->peer_count);
-    size_t buff_size = 5 + (pn->peer_count * 4);
+    uint32_t peer_count = htonl(pn->peer_count - 1);
+    size_t buff_size = 5 + ((pn->peer_count - 1) * 4);
     uint8_t buff[buff_size];
 
     memcpy(buff, &msg_type, 1);
     memcpy(buff + 1, &peer_count, 4);
 
     size_t offset = 5;
+    int skip = 0;
     for(int i = 0; i < pn->peer_count; i++){
-        offset += i * 4;
+        //skip the peer ip
+        if(pn->peers[i].socket == fd){
+            continue;
+        }
+        offset += skip * 4;
+        skip++;
         uint32_t ip = htonl(pn->peers[i].ip);
         memcpy(buff + offset, &ip, 4);        
     }
@@ -453,7 +459,7 @@ int handle_notification(int fd){
     }
 
     message[length] = '\0';
-    printf("Notification received: %s\n", message);
+    LOG_MSG(LOG_DEBUG, "Notification received: %s", message);
     return 0;
 }
 
@@ -475,11 +481,30 @@ void list_history(P2PNet *pn) {
     pthread_mutex_lock(&pn->chat_mutex);
     printf("Chat History (%d):\n", pn->history_size);
     for (int i = 0; i < pn->history_size; i++) {
-        printf("[%d] %.*s\n", i+1, pn->chat_history[i].length, pn->chat_history[i].message);
+        printf("[%d] %s \n", i+1, pn->chat_history[i].message);
     }
     pthread_mutex_unlock(&pn->chat_mutex);
 }
 
+// print the chat history with all message data
+void list_history_complete(P2PNet *pn){
+    pthread_mutex_lock(&pn->chat_mutex);
+    printf("Chat History (%d):\n", pn->history_size);
+    for (int i = 0; i < pn->history_size; i++) {
+        printf("[%d] %s ", i+1, pn->chat_history[i].message);
+        printf("(length): %d ", pn->chat_history[i].length);
+        printf("(code): ");
+        for(int j = 0; j < VERIFICATION_CODE_SIZE; j++){
+            printf("%02hhx", pn->chat_history[i].verification_code[j]);
+        }
+        printf(" (md5): ");
+        for(int j = 0; j < MD5_HASH_SIZE; j++){
+            printf("%02hhx", pn->chat_history[i].md5_hash[j]);
+        }
+        printf("\n");
+    }
+    pthread_mutex_unlock(&pn->chat_mutex);
+}
 
 // send a message to chat 
 void send_chat_message(P2PNet *pn, const char *message){
@@ -536,3 +561,5 @@ void clean_p2p_net(P2PNet *pn){
     // reset memory
     memset(pn, 0, sizeof(P2PNet));
 }
+
+//fc005945
